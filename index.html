@@ -58,7 +58,7 @@
     startBtn.onclick = () => {
       recorder = RecordRTC(stream, {
         type: 'video',
-        mimeType: 'video/webm', // Safari no soporta webm, pero lo descargaremos como .mp4
+        mimeType: 'video/webm', 
         disableLogs: true
       });
       recorder.startRecording();
@@ -73,7 +73,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'grabacion.mp4'; // Aunque sea webm, lo descargamos como .mp4
+        a.download = 'grabacion.webm';
         a.click();
       });
       startBtn.disabled = false;
