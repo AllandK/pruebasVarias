@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Grabador de Video</title>
+  <title>Grabador de Video Compatible</title>
+  <script src="https://cdn.webrtc-experiment.com/RecordRTC.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -10,8 +11,9 @@
       margin-top: 50px;
     }
     video {
-      width: 640px;
-      height: 480px;
+      width: 100%;
+      max-width: 640px;
+      height: auto;
       border: 1px solid #ccc;
       margin-bottom: 20px;
     }
@@ -24,63 +26,67 @@
 </head>
 <body>
   <h1>Grabador de Video</h1>
-  <video id="video" autoplay muted></video>
+  <video id="video" autoplay muted playsinline></video>
   <br>
   <button id="startBtn">Grabar</button>
   <button id="stopBtn" disabled>Detener</button>
   <button id="resetBtn" disabled>Reiniciar</button>
+
   <script>
     const video = document.getElementById('video');
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
     const resetBtn = document.getElementById('resetBtn');
 
-    let mediaRecorder;
-    let recordedChunks = [];
+    let recorder;
+    let stream;
 
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(stream => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+    async function initCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: !isIOS // Desactiva audio en iOS para evitar bloqueos
+        });
         video.srcObject = stream;
-        mediaRecorder = new MediaRecorder(stream);
+      } catch (err) {
+        alert('Error al acceder a la cámara: ' + err.message);
+      }
+    }
 
-        mediaRecorder.ondataavailable = event => {
-          if (event.data.size > 0) {
-            recordedChunks.push(event.data);
-          }
-        };
-
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(recordedChunks, { type: 'video/webm' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'grabacion.webm';
-          a.click();
-        };
-
-        startBtn.onclick = () => {
-          recordedChunks = [];
-          mediaRecorder.start();
-          startBtn.disabled = true;
-          stopBtn.disabled = false;
-          resetBtn.disabled = true;
-        };
-
-        stopBtn.onclick = () => {
-          mediaRecorder.stop();
-          startBtn.disabled = false;
-          stopBtn.disabled = true;
-          resetBtn.disabled = false;
-        };
-
-        resetBtn.onclick = () => {
-          recordedChunks = [];
-          resetBtn.disabled = true;
-        };
-      })
-      .catch(error => {
-        alert('Error al acceder a la cámara: ' + error.message);
+    startBtn.onclick = () => {
+      recorder = RecordRTC(stream, {
+        type: 'video',
+        mimeType: 'video/webm', // Safari no soporta webm, pero lo descargaremos como .mp4
+        disableLogs: true
       });
+      recorder.startRecording();
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      resetBtn.disabled = true;
+    };
+
+    stopBtn.onclick = () => {
+      recorder.stopRecording(() => {
+        const blob = recorder.getBlob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'grabacion.mp4'; // Aunque sea webm, lo descargamos como .mp4
+        a.click();
+      });
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      resetBtn.disabled = false;
+    };
+
+    resetBtn.onclick = () => {
+      recorder = null;
+      resetBtn.disabled = true;
+    };
+
+    initCamera();
   </script>
 </body>
 </html>
